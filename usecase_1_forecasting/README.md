@@ -45,9 +45,11 @@ usecase_1_forecasting/data/raw/
 
 ### Download Option B: Kaggle CLI
 
-Install dependencies:
+Install dependencies inside an isolated virtual environment:
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -125,11 +127,25 @@ usecase_1_forecasting/
 
 From this folder:
 
+Linux/WSL/macOS:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Windows PowerShell:
+
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+Use a virtual environment for this assessment. Installing into a shared/global Python environment can create unrelated dependency conflicts with packages such as `apache-beam`, even when this forecasting project itself installs successfully.
 
 The implementation scripts will be runnable as the pipeline is completed:
 

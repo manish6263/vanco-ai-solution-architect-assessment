@@ -21,8 +21,10 @@ AI Solution Architect Assessment brief - VANCO.pdf
 VANCO_AI_Solutions_Architect_JD.pdf
 
 # Large/local data and generated artifacts
-usecase_1_forecasting/data/raw/
-usecase_1_forecasting/data/processed/
+usecase_1_forecasting/data/raw/*
+!usecase_1_forecasting/data/raw/.gitkeep
+usecase_1_forecasting/data/processed/*
+!usecase_1_forecasting/data/processed/.gitkeep
 usecase_2_asl_detection/dataset/raw/
 usecase_2_asl_detection/dataset/processed/
 usecase_2_asl_detection/runs/*

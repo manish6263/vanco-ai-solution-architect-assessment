@@ -31,6 +31,49 @@ Expected Kaggle files:
 
 Raw data should be placed under `data/raw/`. Large Kaggle files should not be committed unless explicitly allowed.
 
+## Repository Layout
+
+```text
+usecase_1_forecasting/
+├── README.md
+├── requirements.txt
+├── notebooks/
+│   └── 01_store_sales_forecasting.ipynb
+├── src/
+│   ├── config.py
+│   ├── data_loader.py
+│   ├── features.py
+│   ├── validation.py
+│   ├── metrics.py
+│   ├── models.py
+│   ├── train.py
+│   ├── predict.py
+│   └── analysis.py
+├── data/
+│   ├── raw/
+│   └── processed/
+├── submissions/
+├── screenshots/
+└── reports/
+```
+
+## Setup
+
+From this folder:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+The implementation scripts will be runnable as the pipeline is completed:
+
+```bash
+python -m src.train
+python -m src.predict
+```
+
 ## Validation Strategy
 
 The solution will use time-aware validation/backtesting. Random train/validation splits are avoided because they leak future information into training.
@@ -69,4 +112,3 @@ Planned features:
 - [ ] Feature importance/explainability
 - [ ] Error analysis
 - [ ] Limitations and improvement plan
-

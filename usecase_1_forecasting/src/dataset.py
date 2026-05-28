@@ -90,7 +90,9 @@ def add_holiday_features(frame: pd.DataFrame, holidays: pd.DataFrame) -> pd.Data
     if not local.empty:
         result = result.merge(local, on=[DATE_COLUMN, "city"], how="left")
 
-    holiday_flag_columns = [col for col in result.columns if col.startswith("is_")]
+    holiday_flag_columns = [
+        col for col in result.columns if col.startswith("is_") and col != "is_train"
+    ]
     for col in holiday_flag_columns:
         result[col] = result[col].fillna(0).astype("int8")
 

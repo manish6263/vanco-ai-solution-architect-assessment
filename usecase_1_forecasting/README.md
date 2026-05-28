@@ -103,6 +103,7 @@ usecase_1_forecasting/
 |   |-- train.py
 |   |-- predict.py
 |   |-- summarize_data.py
+|   |-- smoke_test.py
 |   |-- validate_data.py
 |   `-- analysis.py
 |-- data/
@@ -126,6 +127,7 @@ pip install -r requirements.txt
 The implementation scripts will be runnable as the pipeline is completed:
 
 ```bash
+python -m src.smoke_test
 python -m src.validate_data
 python -m src.summarize_data
 python -m src.dataset
@@ -139,8 +141,9 @@ The solution will use time-aware validation/backtesting. Random train/validation
 
 Planned validation:
 
-- Seasonal naive baseline on a recent holdout window
-- One or more rolling backtest windows
+- Primary holdout window: final 16 days of the training period, matching the Kaggle forecast horizon
+- Baselines evaluated on the same holdout window
+- One or more rolling backtest windows for model robustness checks
 - Model comparison using RMSLE and business-oriented error breakdowns
 
 ## Feature Strategy
@@ -160,7 +163,7 @@ Important leakage rule: transaction values are only available historically. They
 
 ## Modeling Plan
 
-- Baseline: seasonal naive or rolling mean
+- Baselines: store-family mean, last value, 7-day seasonal naive, 28-day rolling mean
 - Main model: LightGBM, CatBoost, or XGBoost
 - Optional: ensemble with baseline corrections
 

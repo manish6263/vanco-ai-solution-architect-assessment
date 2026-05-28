@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import RAW_DATA_DIR, RAW_FILES
+from .config import DATE_COLUMNS, EXPECTED_COLUMNS, RAW_DATA_DIR, RAW_FILES
 
 
 def read_csv(name: str, raw_data_dir: Path = RAW_DATA_DIR) -> pd.DataFrame:
@@ -21,12 +21,30 @@ def read_csv(name: str, raw_data_dir: Path = RAW_DATA_DIR) -> pd.DataFrame:
             f"Missing {path}. Download the Kaggle competition files into data/raw/."
         )
 
-    return pd.read_csv(path)
+    return pd.read_csv(path, parse_dates=DATE_COLUMNS.get(name))
 
 
 def load_all(raw_data_dir: Path = RAW_DATA_DIR) -> dict[str, pd.DataFrame]:
-    """Load all expected Store Sales CSV files."""
-    return {name: read_csv(name, raw_data_dir) for name in RAW_FILES}
+    """Load and validate all expected Store Sales CSV files."""
+    datasets = {name: read_csv(name, raw_data_dir) for name in RAW_FILES}
+    validate_columns(datasets)
+    return datasets
+
+
+def validate_columns(datasets: dict[str, pd.DataFrame]) -> None:
+    """Validate that each raw file has the columns expected by this pipeline."""
+    errors = []
+    for name, expected in EXPECTED_COLUMNS.items():
+        if name not in datasets:
+            errors.append(f"{name}: dataset not loaded")
+            continue
+
+        missing = sorted(expected - set(datasets[name].columns))
+        if missing:
+            errors.append(f"{name}: missing columns {missing}")
+
+    if errors:
+        raise ValueError("Raw data schema validation failed:\n" + "\n".join(errors))
 
 
 def expected_file_paths(raw_data_dir: Path = RAW_DATA_DIR) -> dict[str, Path]:
@@ -56,3 +74,21 @@ def summarize_raw_files(raw_data_dir: Path = RAW_DATA_DIR) -> pd.DataFrame:
         )
     return pd.DataFrame(rows)
 
+
+def summarize_loaded_frames(datasets: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """Summarize loaded dataframes for initial EDA and reproducibility checks."""
+    rows = []
+    for name, frame in datasets.items():
+        date_min = frame["date"].min() if "date" in frame.columns else None
+        date_max = frame["date"].max() if "date" in frame.columns else None
+        rows.append(
+            {
+                "dataset": name,
+                "rows": len(frame),
+                "columns": len(frame.columns),
+                "date_min": date_min,
+                "date_max": date_max,
+                "missing_cells": int(frame.isna().sum().sum()),
+            }
+        )
+    return pd.DataFrame(rows)

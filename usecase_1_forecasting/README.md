@@ -72,6 +72,18 @@ Validate the local data files:
 python -m src.validate_data
 ```
 
+After validation passes, inspect the raw data and joined frame:
+
+```bash
+python -m src.summarize_data
+```
+
+Create the first joined modeling table:
+
+```bash
+python -m src.dataset
+```
+
 ## Repository Layout
 
 ```text
@@ -83,12 +95,14 @@ usecase_1_forecasting/
 |-- src/
 |   |-- config.py
 |   |-- data_loader.py
+|   |-- dataset.py
 |   |-- features.py
 |   |-- validation.py
 |   |-- metrics.py
 |   |-- models.py
 |   |-- train.py
 |   |-- predict.py
+|   |-- summarize_data.py
 |   |-- validate_data.py
 |   `-- analysis.py
 |-- data/
@@ -112,6 +126,9 @@ pip install -r requirements.txt
 The implementation scripts will be runnable as the pipeline is completed:
 
 ```bash
+python -m src.validate_data
+python -m src.summarize_data
+python -m src.dataset
 python -m src.train
 python -m src.predict
 ```
@@ -138,6 +155,8 @@ Planned features:
 - Promotion features
 - Sales lags and rolling statistics by store-family
 - Seasonality features
+
+Important leakage rule: transaction values are only available historically. They may be used directly for validation rows where the date is known in `transactions.csv`, but final test-time features must rely on lagged or aggregated historical transaction information rather than unknown future transactions.
 
 ## Modeling Plan
 

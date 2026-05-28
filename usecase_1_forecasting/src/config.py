@@ -28,3 +28,27 @@ RAW_FILES = {
     "sample_submission": "sample_submission.csv",
 }
 
+DATE_COLUMNS = {
+    "train": ["date"],
+    "test": ["date"],
+    "oil": ["date"],
+    "holidays": ["date"],
+    "transactions": ["date"],
+}
+
+EXPECTED_COLUMNS = {
+    "train": {"id", "date", "store_nbr", "family", "sales", "onpromotion"},
+    "test": {"id", "date", "store_nbr", "family", "onpromotion"},
+    "stores": {"store_nbr", "city", "state", "type", "cluster"},
+    "oil": {"date", "dcoilwtico"},
+    "holidays": {
+        "date",
+        "type",
+        "locale",
+        "locale_name",
+        "description",
+        "transferred",
+    },
+    "transactions": {"date", "store_nbr", "transactions"},
+    "sample_submission": {"id", "sales"},
+}

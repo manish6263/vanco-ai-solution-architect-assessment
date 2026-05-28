@@ -28,3 +28,31 @@ def load_all(raw_data_dir: Path = RAW_DATA_DIR) -> dict[str, pd.DataFrame]:
     """Load all expected Store Sales CSV files."""
     return {name: read_csv(name, raw_data_dir) for name in RAW_FILES}
 
+
+def expected_file_paths(raw_data_dir: Path = RAW_DATA_DIR) -> dict[str, Path]:
+    """Return the expected CSV paths keyed by logical dataset name."""
+    return {name: raw_data_dir / filename for name, filename in RAW_FILES.items()}
+
+
+def missing_files(raw_data_dir: Path = RAW_DATA_DIR) -> list[Path]:
+    """Return expected Kaggle CSV paths that are not available locally."""
+    return [path for path in expected_file_paths(raw_data_dir).values() if not path.exists()]
+
+
+def summarize_raw_files(raw_data_dir: Path = RAW_DATA_DIR) -> pd.DataFrame:
+    """Build a small availability summary for the required raw CSV files."""
+    rows = []
+    for name, path in expected_file_paths(raw_data_dir).items():
+        rows.append(
+            {
+                "dataset": name,
+                "file": path.name,
+                "path": str(path),
+                "exists": path.exists(),
+                "size_mb": round(path.stat().st_size / (1024 * 1024), 2)
+                if path.exists()
+                else None,
+            }
+        )
+    return pd.DataFrame(rows)
+

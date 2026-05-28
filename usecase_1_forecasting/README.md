@@ -31,30 +31,72 @@ Expected Kaggle files:
 
 Raw data should be placed under `data/raw/`. Large Kaggle files should not be committed unless explicitly allowed.
 
+### Download Option A: Kaggle Website
+
+1. Open the competition page:
+   `https://www.kaggle.com/competitions/store-sales-time-series-forecasting`
+2. Accept the competition rules if Kaggle asks.
+3. Download the dataset files.
+4. Extract/copy the CSV files into:
+
+```text
+usecase_1_forecasting/data/raw/
+```
+
+### Download Option B: Kaggle CLI
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Configure Kaggle credentials by placing `kaggle.json` in the standard Kaggle config location:
+
+```text
+Windows: C:\Users\<your-user>\.kaggle\kaggle.json
+Linux/macOS: ~/.kaggle/kaggle.json
+```
+
+Then run:
+
+```bash
+kaggle competitions download -c store-sales-time-series-forecasting -p data/raw
+```
+
+Extract the downloaded zip so `data/raw/` contains the expected CSV files.
+
+Validate the local data files:
+
+```bash
+python -m src.validate_data
+```
+
 ## Repository Layout
 
 ```text
 usecase_1_forecasting/
-├── README.md
-├── requirements.txt
-├── notebooks/
-│   └── 01_store_sales_forecasting.ipynb
-├── src/
-│   ├── config.py
-│   ├── data_loader.py
-│   ├── features.py
-│   ├── validation.py
-│   ├── metrics.py
-│   ├── models.py
-│   ├── train.py
-│   ├── predict.py
-│   └── analysis.py
-├── data/
-│   ├── raw/
-│   └── processed/
-├── submissions/
-├── screenshots/
-└── reports/
+|-- README.md
+|-- requirements.txt
+|-- notebooks/
+|   `-- 01_store_sales_forecasting.ipynb
+|-- src/
+|   |-- config.py
+|   |-- data_loader.py
+|   |-- features.py
+|   |-- validation.py
+|   |-- metrics.py
+|   |-- models.py
+|   |-- train.py
+|   |-- predict.py
+|   |-- validate_data.py
+|   `-- analysis.py
+|-- data/
+|   |-- raw/
+|   `-- processed/
+|-- submissions/
+|-- screenshots/
+`-- reports/
 ```
 
 ## Setup

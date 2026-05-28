@@ -200,6 +200,15 @@ Training outputs:
 - `reports/lightgbm_feature_importance.csv`
 - `models/lightgbm_validation_model.txt`
 
+Prediction outputs:
+
+- `submissions/submission_lightgbm.csv`
+- `submissions/test_predictions_lightgbm_detailed.csv`
+- `submissions/final_model_feature_importance.csv`
+- `models/lightgbm_final_model.txt`
+
+The prediction pipeline uses recursive day-by-day forecasting for the Kaggle test period. This is necessary because lag and rolling sales features for later test dates depend on earlier forecasted test dates.
+
 ## Deliverables
 
 - [ ] Notebook or scripts for training and inference

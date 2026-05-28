@@ -7,6 +7,7 @@ import pandas as pd
 from .dataset import build_modeling_frame
 from .features import feature_columns, make_features
 from .models import BASELINE_MODELS
+from .predict import build_submission
 from .validation import make_holdout_window, split_by_window
 
 
@@ -83,6 +84,13 @@ def main() -> None:
         assert len(predictions) == len(valid_split), name
         assert predictions.notna().all(), name
         assert (predictions >= 0).all(), name
+
+    submission = build_submission(
+        pd.DataFrame({"id": [100, 101], "sales": [1.0, 2.0]}),
+        pd.DataFrame({"id": [100, 101], "sales": [0.0, 0.0]}),
+    )
+    assert list(submission.columns) == ["id", "sales"]
+    assert len(submission) == 2
 
     print("smoke test ok")
 

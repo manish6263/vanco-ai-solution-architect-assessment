@@ -112,7 +112,9 @@ def add_promotion_features(frame: pd.DataFrame) -> pd.DataFrame:
             [result["store_nbr"], result["family"]], observed=True
         ).rolling(window, min_periods=1).mean().reset_index(level=[0, 1], drop=True)
 
-    result["promo_store_family_mean"] = group.transform("mean")
+    result["promo_store_family_mean_history"] = group.transform(
+        lambda values: values.expanding().mean().shift(1)
+    )
     result["has_promotion"] = (result["onpromotion"] > 0).astype("int8")
     return result
 

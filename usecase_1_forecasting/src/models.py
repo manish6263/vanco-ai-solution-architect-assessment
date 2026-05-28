@@ -163,6 +163,26 @@ def train_lightgbm_log_target(
     return model
 
 
+def train_final_lightgbm_log_target(
+    train: pd.DataFrame,
+    feature_names: list[str],
+):
+    """Train the final LightGBM model on all labeled training rows."""
+    model = make_lightgbm_regressor()
+    categorical_features = [
+        column
+        for column in feature_names
+        if str(train[column].dtype) == "category"
+    ]
+
+    model.fit(
+        train[feature_names],
+        np.log1p(train[TARGET]),
+        categorical_feature=categorical_features or "auto",
+    )
+    return model
+
+
 def predict_lightgbm_sales(model, frame: pd.DataFrame, feature_names: list[str]) -> np.ndarray:
     """Predict non-negative sales from a LightGBM log-target model."""
     predictions = np.expm1(model.predict(frame[feature_names]))

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from .dataset import build_modeling_frame
+from .features import feature_columns, make_features
 from .models import BASELINE_MODELS
 from .validation import make_holdout_window, split_by_window
 
@@ -61,6 +62,15 @@ def make_synthetic_datasets() -> dict[str, pd.DataFrame]:
 
 def main() -> None:
     frame = build_modeling_frame(make_synthetic_datasets())
+    featured = make_features(frame)
+    columns = feature_columns(featured)
+
+    assert "sales_lag_7" in featured.columns
+    assert "transactions_lag_1" in featured.columns
+    assert "oil_lag_1" in featured.columns
+    assert "day_of_week" in columns
+    assert "sales" not in columns
+
     train_rows = frame.loc[frame["is_train"]].copy()
     window = make_holdout_window(train_rows)
     train_split, valid_split = split_by_window(train_rows, window)
@@ -79,4 +89,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

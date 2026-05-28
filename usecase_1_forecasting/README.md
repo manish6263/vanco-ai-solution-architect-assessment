@@ -84,6 +84,12 @@ Create the first joined modeling table:
 python -m src.dataset
 ```
 
+Create the engineered feature table:
+
+```bash
+python -m src.features
+```
+
 ## Repository Layout
 
 ```text
@@ -131,6 +137,7 @@ python -m src.smoke_test
 python -m src.validate_data
 python -m src.summarize_data
 python -m src.dataset
+python -m src.features
 python -m src.train
 python -m src.predict
 ```
@@ -157,6 +164,7 @@ Planned features:
 - Oil price lags and rolling statistics
 - Promotion features
 - Sales lags and rolling statistics by store-family
+- Transaction lags and rolling statistics by store
 - Seasonality features
 
 Important leakage rule: transaction values are only available historically. They may be used directly for validation rows where the date is known in `transactions.csv`, but final test-time features must rely on lagged or aggregated historical transaction information rather than unknown future transactions.

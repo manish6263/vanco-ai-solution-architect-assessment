@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Source documents kept locally, not committed
+AI Solution Architect Assessment brief - VANCO.pdf
+VANCO_AI_Solutions_Architect_JD.pdf
+
+# Large/local data and generated artifacts
+usecase_1_forecasting/data/raw/
+usecase_1_forecasting/data/processed/
+usecase_2_asl_detection/dataset/raw/
+usecase_2_asl_detection/dataset/processed/
+usecase_2_asl_detection/runs/*
+!usecase_2_asl_detection/runs/.gitkeep
+usecase_3_hybrid_rag/data/raw/
+usecase_3_hybrid_rag/indexes/*
+!usecase_3_hybrid_rag/indexes/.gitkeep
+usecase_3_hybrid_rag/graph/data/
+
+# Model artifacts
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+*.pkl
+*.joblib
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .config import DATE_COLUMN, TARGET
+from .config import DATE_COLUMN, RANDOM_SEED, TARGET
 
 GROUP_COLUMNS = ["store_nbr", "family"]
 
@@ -101,3 +101,85 @@ BASELINE_MODELS = {
 def clip_predictions(values) -> np.ndarray:
     """Force predictions into the valid non-negative sales range."""
     return np.maximum(np.asarray(values, dtype=float), 0)
+
+
+def make_lightgbm_regressor():
+    """Create the primary LightGBM model used for tabular forecasting."""
+    try:
+        from lightgbm import LGBMRegressor
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "LightGBM is required for model training. Install dependencies with "
+            "`pip install -r requirements.txt` from usecase_1_forecasting/."
+        ) from exc
+
+    return LGBMRegressor(
+        objective="regression",
+        n_estimators=1200,
+        learning_rate=0.03,
+        num_leaves=64,
+        max_depth=-1,
+        min_child_samples=80,
+        subsample=0.85,
+        subsample_freq=1,
+        colsample_bytree=0.85,
+        reg_alpha=0.1,
+        reg_lambda=1.0,
+        random_state=RANDOM_SEED,
+        n_jobs=-1,
+        verbosity=-1,
+    )
+
+
+def train_lightgbm_log_target(
+    train: pd.DataFrame,
+    valid: pd.DataFrame,
+    feature_names: list[str],
+):
+    """Train LightGBM on log1p(sales) and evaluate against validation rows."""
+    model = make_lightgbm_regressor()
+    categorical_features = [
+        column
+        for column in feature_names
+        if str(train[column].dtype) == "category"
+    ]
+
+    try:
+        from lightgbm import early_stopping, log_evaluation
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "LightGBM is required for model training. Install dependencies with "
+            "`pip install -r requirements.txt` from usecase_1_forecasting/."
+        ) from exc
+
+    model.fit(
+        train[feature_names],
+        np.log1p(train[TARGET]),
+        eval_set=[(valid[feature_names], np.log1p(valid[TARGET]))],
+        eval_metric="rmse",
+        categorical_feature=categorical_features or "auto",
+        callbacks=[early_stopping(100), log_evaluation(100)],
+    )
+    return model
+
+
+def predict_lightgbm_sales(model, frame: pd.DataFrame, feature_names: list[str]) -> np.ndarray:
+    """Predict non-negative sales from a LightGBM log-target model."""
+    predictions = np.expm1(model.predict(frame[feature_names]))
+    return clip_predictions(predictions)
+
+
+def feature_importance_frame(model, feature_names: list[str]) -> pd.DataFrame:
+    """Return split/gain feature importance from the trained LightGBM model."""
+    booster = model.booster_
+    return (
+        pd.DataFrame(
+            {
+                "feature": feature_names,
+                "importance_split": booster.feature_importance(importance_type="split"),
+                "importance_gain": booster.feature_importance(importance_type="gain"),
+            }
+        )
+        .sort_values("importance_gain", ascending=False)
+        .reset_index(drop=True)
+    )

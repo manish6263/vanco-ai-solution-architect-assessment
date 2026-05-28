@@ -115,6 +115,7 @@ usecase_1_forecasting/
 |-- data/
 |   |-- raw/
 |   `-- processed/
+|-- models/
 |-- submissions/
 |-- screenshots/
 `-- reports/
@@ -172,8 +173,16 @@ Important leakage rule: transaction values are only available historically. They
 ## Modeling Plan
 
 - Baselines: store-family mean, last value, 7-day seasonal naive, 28-day rolling mean
-- Main model: LightGBM, CatBoost, or XGBoost
+- Main model: LightGBM trained on `log1p(sales)` with categorical features and early stopping
 - Optional: ensemble with baseline corrections
+
+Training outputs:
+
+- `reports/baseline_validation_results.csv`
+- `reports/lightgbm_validation_metrics.csv`
+- `reports/lightgbm_validation_predictions.csv`
+- `reports/lightgbm_feature_importance.csv`
+- `models/lightgbm_validation_model.txt`
 
 ## Deliverables
 

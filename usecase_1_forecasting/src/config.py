@@ -10,6 +10,7 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 SUBMISSIONS_DIR = USECASE_DIR / "submissions"
 REPORTS_DIR = USECASE_DIR / "reports"
 SCREENSHOTS_DIR = USECASE_DIR / "screenshots"
+MODELS_DIR = USECASE_DIR / "models"
 
 TARGET = "sales"
 ID_COLUMN = "id"

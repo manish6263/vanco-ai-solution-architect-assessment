@@ -30,10 +30,89 @@ Planned components:
 - Chunking: page-aware and heading-aware chunks
 - Vector DB/index: FAISS or Chroma
 - Keyword search: BM25
-- Graph DB/representation: Neo4j preferred, with a documented fallback if needed
-- Backend/API: FastAPI or Streamlit-native backend
-- UI: Streamlit or lightweight web app
+- Graph DB/representation: NetworkX persisted graph, with Neo4j export path documented as the production replacement
+- Backend/API: Streamlit-native backend for live demo
+- UI: Streamlit
 - LLM: configurable provider through environment variables
+
+## Repository Layout
+
+```text
+usecase_3_hybrid_rag/
+|-- README.md
+|-- requirements.txt
+|-- .env.example
+|-- app/
+|   `-- streamlit_app.py
+|-- ingestion/
+|   |-- parse_pdf.py
+|   |-- chunking.py
+|   |-- build_indexes.py
+|   `-- ingest.py
+|-- retrieval/
+|   |-- vector_store.py
+|   |-- keyword_store.py
+|   |-- graph_store.py
+|   `-- hybrid_retriever.py
+|-- generation/
+|   |-- prompts.py
+|   `-- answer.py
+|-- evaluation/
+|   |-- sample_questions.md
+|   `-- evaluate_retrieval.py
+|-- data/
+|   |-- raw/
+|   `-- processed/
+|-- indexes/
+|-- graph/
+|-- reports/
+`-- screenshots/
+```
+
+## Setup
+
+From this folder:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Windows PowerShell:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+## Source PDF
+
+Download the NCERT Class 12 Physics Part 1 PDF from:
+
+```text
+https://www.drishtiias.com/images/pdf/NCERT-Class-12-Physics-Part-1.pdf
+```
+
+Place it at:
+
+```text
+usecase_3_hybrid_rag/data/raw/ncert_physics_part1.pdf
+```
+
+## Planned Commands
+
+These commands will become active as implementation progresses:
+
+```bash
+python -m ingestion.parse_pdf
+python -m ingestion.ingest
+python -m evaluation.evaluate_retrieval
+streamlit run app/streamlit_app.py
+```
 
 ## Graph Design
 
@@ -97,4 +176,3 @@ Track:
 - [ ] Architecture diagram
 - [ ] Screenshots/logs
 - [ ] Limitations and improvement plan
-

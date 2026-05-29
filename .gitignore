@@ -27,11 +27,15 @@ usecase_1_forecasting/data/processed/*
 !usecase_1_forecasting/data/processed/.gitkeep
 usecase_1_forecasting/models/*
 !usecase_1_forecasting/models/.gitkeep
+usecase_1_forecasting/submissions/*.csv
 usecase_2_asl_detection/dataset/raw/
 usecase_2_asl_detection/dataset/processed/
 usecase_2_asl_detection/runs/*
 !usecase_2_asl_detection/runs/.gitkeep
-usecase_3_hybrid_rag/data/raw/
+usecase_3_hybrid_rag/data/raw/*
+!usecase_3_hybrid_rag/data/raw/.gitkeep
+usecase_3_hybrid_rag/data/processed/*
+!usecase_3_hybrid_rag/data/processed/.gitkeep
 usecase_3_hybrid_rag/indexes/*
 !usecase_3_hybrid_rag/indexes/.gitkeep
 usecase_3_hybrid_rag/graph/data/

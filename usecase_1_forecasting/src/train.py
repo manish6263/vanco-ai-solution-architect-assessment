@@ -138,9 +138,14 @@ def recursive_validation_predictions(
     # horizon instead of letting lag features peek at actual validation sales.
     working.loc[validation_mask, TARGET] = float("nan")
     prediction_parts = []
+    validation_dates = sorted(working.loc[validation_mask, DATE_COLUMN].unique())
 
-    for valid_date in sorted(working.loc[validation_mask, DATE_COLUMN].unique()):
-        featured = make_features(working)
+    for index, valid_date in enumerate(validation_dates, start=1):
+        log_step(
+            f"recursive validation date {index}/{len(validation_dates)}: "
+            f"{pd.Timestamp(valid_date).date()}"
+        )
+        featured = make_features(working, verbose=False)
         day_mask = (
             working[DATE_COLUMN].eq(valid_date)
             & working["is_train"]

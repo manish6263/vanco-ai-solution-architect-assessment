@@ -196,25 +196,32 @@ def encode_categoricals(frame: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def make_features(frame: pd.DataFrame) -> pd.DataFrame:
+def make_features(frame: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
     """Build the complete feature table from the joined modeling frame."""
-    log_step(f"starting feature engineering for {len(frame):,} rows")
-    log_step("adding calendar features")
+    if verbose:
+        log_step(f"starting feature engineering for {len(frame):,} rows")
+        log_step("adding calendar features")
     result = add_calendar_features(frame)
-    log_step("adding oil lag/rolling features")
+    if verbose:
+        log_step("adding oil lag/rolling features")
     result = add_oil_features(result)
-    log_step("adding promotion features")
+    if verbose:
+        log_step("adding promotion features")
     result = add_promotion_features(result)
-    log_step("adding transaction lag/rolling features")
+    if verbose:
+        log_step("adding transaction lag/rolling features")
     result = add_transaction_features(result)
-    log_step("adding sales lag/rolling features")
+    if verbose:
+        log_step("adding sales lag/rolling features")
     result = add_sales_history_features(result)
-    log_step("encoding categorical features")
+    if verbose:
+        log_step("encoding categorical features")
     result = encode_categoricals(result)
     result = result.sort_values(["store_nbr", "family", DATE_COLUMN]).reset_index(
         drop=True
     )
-    log_step(f"finished feature engineering with {len(feature_columns(result))} features")
+    if verbose:
+        log_step(f"finished feature engineering with {len(feature_columns(result))} features")
     return result
 
 

@@ -221,6 +221,8 @@ Prediction outputs:
 
 - `submissions/submission_lightgbm.csv`
 - `submissions/submission_lightgbm_postprocessed.csv`
+- `submissions/submission_lightgbm_guarded.csv`
+- `submissions/submission_lightgbm_blend_recent.csv`
 - `submissions/test_predictions_lightgbm_detailed.csv`
 - `submissions/test_predictions_lightgbm_postprocessed_detailed.csv`
 - `submissions/submission_diagnostics.csv`

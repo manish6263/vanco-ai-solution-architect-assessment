@@ -7,7 +7,7 @@ import pandas as pd
 from .dataset import build_modeling_frame
 from .features import feature_columns, make_features
 from .models import BASELINE_MODELS
-from .predict import build_submission, postprocess_predictions
+from .predict import build_submission, postprocess_prediction_variants, postprocess_predictions
 from .validation import make_holdout_window, split_by_window
 
 
@@ -107,6 +107,21 @@ def main() -> None:
     )
     assert len(postprocessed) == 2
     assert diagnostics["rows"].iloc[0] == 2
+    variants, variant_diagnostics = postprocess_prediction_variants(
+        pd.DataFrame(
+            {
+                "id": [100, 101],
+                "date": pd.to_datetime(["2017-01-25", "2017-01-26"]),
+                "store_nbr": [1, 1],
+                "family": ["GROCERY I", "GROCERY I"],
+                "onpromotion": [0, 1],
+                "sales": [1_000.0, 2.0],
+            }
+        ),
+        make_synthetic_datasets()["train"],
+    )
+    assert {"mild", "guarded", "blend_recent"} == set(variants)
+    assert set(variant_diagnostics["variant"]) == {"mild", "guarded", "blend_recent"}
 
     print("smoke test ok")
 

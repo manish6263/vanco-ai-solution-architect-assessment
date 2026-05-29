@@ -44,7 +44,9 @@ def recursive_test_predictions(
             continue
 
         day_predictions = predict_lightgbm_sales(model, day_rows, features)
-        day_output = day_rows[[ID_COLUMN, DATE_COLUMN, "store_nbr", "family"]].copy()
+        day_output = day_rows[
+            [ID_COLUMN, DATE_COLUMN, "store_nbr", "family", "onpromotion"]
+        ].copy()
         day_output[TARGET] = day_predictions
         prediction_parts.append(day_output)
 

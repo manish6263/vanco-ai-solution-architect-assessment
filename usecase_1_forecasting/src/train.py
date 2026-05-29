@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from time import perf_counter
+
 import numpy as np
 import pandas as pd
 
@@ -19,14 +22,27 @@ from .models import (
 from .validation import describe_window, make_holdout_window, split_by_window
 
 
+def log_step(message: str) -> None:
+    """Print a timestamped progress message."""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] [train] {message}", flush=True)
+
+
 def evaluate_baselines(frame: pd.DataFrame) -> pd.DataFrame:
     """Evaluate baseline forecasts on the final time-aware validation window."""
+    log_step("evaluating baseline models")
     train_rows = frame.loc[frame["is_train"]].copy()
     window = make_holdout_window(train_rows)
     train_split, valid_split = split_by_window(train_rows, window)
+    log_step(
+        "baseline split: "
+        f"train={len(train_split):,} rows, valid={len(valid_split):,} rows, "
+        f"window={window.valid_start_date.date()} to {window.valid_end_date.date()}"
+    )
 
     rows = []
     for model_name, predict_fn in BASELINE_MODELS.items():
+        log_step(f"running baseline: {model_name}")
         predictions = predict_fn(train_split, valid_split)
         rows.append(
             {
@@ -41,12 +57,23 @@ def evaluate_baselines(frame: pd.DataFrame) -> pd.DataFrame:
 
 def train_validation_lightgbm(frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """Train LightGBM on the final holdout split and return report tables."""
+    log_step("preparing LightGBM validation split")
     train_rows = frame.loc[frame["is_train"]].copy()
     window = make_holdout_window(train_rows)
     train_split, valid_split = split_by_window(train_rows, window)
     features = feature_columns(frame)
+    log_step(
+        "LightGBM split: "
+        f"train={len(train_split):,} rows, valid={len(valid_split):,} rows, "
+        f"features={len(features):,}"
+    )
 
+    log_step("training LightGBM model")
+    start = perf_counter()
     model = train_lightgbm_log_target(train_split, valid_split, features)
+    log_step(f"LightGBM training finished in {perf_counter() - start:.1f}s")
+
+    log_step("scoring validation predictions")
     predictions = predict_lightgbm_sales(model, valid_split, features)
     score = rmsle(valid_split[TARGET], predictions)
 
@@ -77,6 +104,7 @@ def train_validation_lightgbm(frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
     feature_importance = feature_importance_frame(model, features)
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    log_step("saving validation LightGBM model")
     model.booster_.save_model(str(MODELS_DIR / "lightgbm_validation_model.txt"))
 
     return {
@@ -87,12 +115,27 @@ def train_validation_lightgbm(frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
 
 
 def main() -> None:
+    total_start = perf_counter()
+    log_step("loading raw Kaggle datasets")
     datasets = load_all()
+    for name, frame in datasets.items():
+        log_step(f"loaded {name}: {len(frame):,} rows, {len(frame.columns):,} columns")
+
+    log_step("building joined modeling frame")
     base_frame = build_modeling_frame(datasets)
+    log_step(
+        f"joined frame ready: {len(base_frame):,} rows, "
+        f"{len(base_frame.columns):,} columns"
+    )
+
+    log_step("building engineered features")
     frame = make_features(base_frame)
+    log_step(f"feature frame ready: {len(frame):,} rows, {len(frame.columns):,} columns")
+
     baseline_results = evaluate_baselines(frame)
     lightgbm_results = train_validation_lightgbm(frame)
 
+    log_step("writing report artifacts")
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     baseline_path = REPORTS_DIR / "baseline_validation_results.csv"
     lightgbm_metrics_path = REPORTS_DIR / "lightgbm_validation_metrics.csv"
@@ -114,6 +157,7 @@ def main() -> None:
     print(f"Wrote LightGBM validation metrics to {lightgbm_metrics_path}")
     print(f"Wrote validation predictions to {validation_predictions_path}")
     print(f"Wrote feature importance to {feature_importance_path}")
+    log_step(f"training pipeline completed in {perf_counter() - total_start:.1f}s")
 
 
 if __name__ == "__main__":

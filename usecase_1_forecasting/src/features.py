@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 
@@ -31,6 +33,12 @@ CATEGORICAL_FEATURES = [
     "regional_holiday_type",
     "local_holiday_type",
 ]
+
+
+def log_step(message: str) -> None:
+    """Print a timestamped progress message."""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] [features] {message}", flush=True)
 
 
 def add_calendar_features(frame: pd.DataFrame) -> pd.DataFrame:
@@ -190,15 +198,24 @@ def encode_categoricals(frame: pd.DataFrame) -> pd.DataFrame:
 
 def make_features(frame: pd.DataFrame) -> pd.DataFrame:
     """Build the complete feature table from the joined modeling frame."""
+    log_step(f"starting feature engineering for {len(frame):,} rows")
+    log_step("adding calendar features")
     result = add_calendar_features(frame)
+    log_step("adding oil lag/rolling features")
     result = add_oil_features(result)
+    log_step("adding promotion features")
     result = add_promotion_features(result)
+    log_step("adding transaction lag/rolling features")
     result = add_transaction_features(result)
+    log_step("adding sales lag/rolling features")
     result = add_sales_history_features(result)
+    log_step("encoding categorical features")
     result = encode_categoricals(result)
-    return result.sort_values(["store_nbr", "family", DATE_COLUMN]).reset_index(
+    result = result.sort_values(["store_nbr", "family", DATE_COLUMN]).reset_index(
         drop=True
     )
+    log_step(f"finished feature engineering with {len(feature_columns(result))} features")
+    return result
 
 
 def feature_columns(frame: pd.DataFrame) -> list[str]:

@@ -120,8 +120,16 @@ def main() -> None:
         ),
         make_synthetic_datasets()["train"],
     )
-    assert {"mild", "guarded", "blend_recent"} == set(variants)
-    assert set(variant_diagnostics["variant"]) == {"mild", "guarded", "blend_recent"}
+    expected_variants = {
+        "mild",
+        "guarded",
+        "blend_recent",
+        "blend_recent_60",
+        "blend_recent_50",
+        "blend_recent_40",
+    }
+    assert expected_variants == set(variants)
+    assert set(variant_diagnostics["variant"]) == expected_variants
 
     print("smoke test ok")
 

@@ -223,6 +223,9 @@ Prediction outputs:
 - `submissions/submission_lightgbm_postprocessed.csv`
 - `submissions/submission_lightgbm_guarded.csv`
 - `submissions/submission_lightgbm_blend_recent.csv`
+- `submissions/submission_lightgbm_blend_recent_60.csv`
+- `submissions/submission_lightgbm_blend_recent_50.csv`
+- `submissions/submission_lightgbm_blend_recent_40.csv`
 - `submissions/test_predictions_lightgbm_detailed.csv`
 - `submissions/test_predictions_lightgbm_postprocessed_detailed.csv`
 - `submissions/submission_diagnostics.csv`

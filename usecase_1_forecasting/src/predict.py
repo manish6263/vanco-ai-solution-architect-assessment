@@ -179,7 +179,7 @@ def apply_prediction_guardrails(
         inactive_mask = (result["recent_nonzero_days"].fillna(0) <= 2) & (
             result["onpromotion"] <= 0
         )
-    elif variant == "blend_recent":
+    elif variant in {"blend_recent", "blend_recent_60", "blend_recent_50", "blend_recent_40"}:
         cap = (
             pd.concat(
                 [
@@ -193,7 +193,13 @@ def apply_prediction_guardrails(
             .fillna(result[TARGET])
         )
         recent_anchor = result["recent_mean"].fillna(result["all_time_mean"]).fillna(0)
-        blend_weight = 0.70
+        blend_weights = {
+            "blend_recent": 0.70,
+            "blend_recent_60": 0.60,
+            "blend_recent_50": 0.50,
+            "blend_recent_40": 0.40,
+        }
+        blend_weight = blend_weights[variant]
         promo_mask = result["onpromotion"] > 0
         result.loc[~promo_mask, TARGET] = (
             blend_weight * result.loc[~promo_mask, TARGET]
@@ -250,7 +256,14 @@ def postprocess_prediction_variants(
     variants = {}
     diagnostics = []
 
-    for variant in ["mild", "guarded", "blend_recent"]:
+    for variant in [
+        "mild",
+        "guarded",
+        "blend_recent",
+        "blend_recent_60",
+        "blend_recent_50",
+        "blend_recent_40",
+    ]:
         result = apply_prediction_guardrails(predictions, stats, variant)
         keep_columns = [
             ID_COLUMN,
@@ -300,6 +313,9 @@ def main() -> None:
     postprocessed_submission_path = SUBMISSIONS_DIR / "submission_lightgbm_postprocessed.csv"
     guarded_submission_path = SUBMISSIONS_DIR / "submission_lightgbm_guarded.csv"
     blend_submission_path = SUBMISSIONS_DIR / "submission_lightgbm_blend_recent.csv"
+    blend_60_submission_path = SUBMISSIONS_DIR / "submission_lightgbm_blend_recent_60.csv"
+    blend_50_submission_path = SUBMISSIONS_DIR / "submission_lightgbm_blend_recent_50.csv"
+    blend_40_submission_path = SUBMISSIONS_DIR / "submission_lightgbm_blend_recent_40.csv"
     predictions_path = SUBMISSIONS_DIR / "test_predictions_lightgbm_detailed.csv"
     postprocessed_predictions_path = (
         SUBMISSIONS_DIR / "test_predictions_lightgbm_postprocessed_detailed.csv"
@@ -316,6 +332,15 @@ def main() -> None:
     build_submission(
         variant_predictions["blend_recent"], datasets["sample_submission"]
     ).to_csv(blend_submission_path, index=False)
+    build_submission(
+        variant_predictions["blend_recent_60"], datasets["sample_submission"]
+    ).to_csv(blend_60_submission_path, index=False)
+    build_submission(
+        variant_predictions["blend_recent_50"], datasets["sample_submission"]
+    ).to_csv(blend_50_submission_path, index=False)
+    build_submission(
+        variant_predictions["blend_recent_40"], datasets["sample_submission"]
+    ).to_csv(blend_40_submission_path, index=False)
     predictions.to_csv(predictions_path, index=False)
     postprocessed_predictions.to_csv(postprocessed_predictions_path, index=False)
     postprocess_diagnostics.to_csv(diagnostics_path, index=False)
@@ -326,6 +351,9 @@ def main() -> None:
     print(f"Wrote postprocessed Kaggle submission to {postprocessed_submission_path}")
     print(f"Wrote guarded Kaggle submission to {guarded_submission_path}")
     print(f"Wrote blend-recent Kaggle submission to {blend_submission_path}")
+    print(f"Wrote blend-recent-60 Kaggle submission to {blend_60_submission_path}")
+    print(f"Wrote blend-recent-50 Kaggle submission to {blend_50_submission_path}")
+    print(f"Wrote blend-recent-40 Kaggle submission to {blend_40_submission_path}")
     print(f"Wrote detailed test predictions to {predictions_path}")
     print(f"Wrote postprocessed detailed test predictions to {postprocessed_predictions_path}")
     print(f"Wrote submission diagnostics to {diagnostics_path}")

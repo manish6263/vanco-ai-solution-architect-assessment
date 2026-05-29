@@ -211,7 +211,9 @@ Training outputs:
 
 - `reports/baseline_validation_results.csv`
 - `reports/lightgbm_validation_metrics.csv`
+- `reports/lightgbm_recursive_validation_metrics.csv`
 - `reports/lightgbm_validation_predictions.csv`
+- `reports/lightgbm_recursive_validation_predictions.csv`
 - `reports/lightgbm_feature_importance.csv`
 - `models/lightgbm_validation_model.txt`
 

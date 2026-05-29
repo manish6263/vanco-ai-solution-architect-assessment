@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+import os
+
 import numpy as np
 import pandas as pd
 
 from .config import DATE_COLUMN, RANDOM_SEED, TARGET
 
 GROUP_COLUMNS = ["store_nbr", "family"]
+DEFAULT_LIGHTGBM_DEVICE = os.getenv("LGBM_DEVICE", "auto").lower()
+
+
+def log_step(message: str) -> None:
+    """Print a timestamped model-training progress message."""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[{timestamp}] [models] {message}", flush=True)
 
 
 def _fallback_means(train: pd.DataFrame) -> tuple[pd.Series, float]:
@@ -103,7 +113,7 @@ def clip_predictions(values) -> np.ndarray:
     return np.maximum(np.asarray(values, dtype=float), 0)
 
 
-def make_lightgbm_regressor():
+def make_lightgbm_regressor(device_type: str = "cpu"):
     """Create the primary LightGBM model used for tabular forecasting."""
     try:
         from lightgbm import LGBMRegressor
@@ -113,22 +123,67 @@ def make_lightgbm_regressor():
             "`pip install -r requirements.txt` from usecase_1_forecasting/."
         ) from exc
 
-    return LGBMRegressor(
-        objective="regression",
-        n_estimators=1200,
-        learning_rate=0.03,
-        num_leaves=64,
-        max_depth=-1,
-        min_child_samples=80,
-        subsample=0.85,
-        subsample_freq=1,
-        colsample_bytree=0.85,
-        reg_alpha=0.1,
-        reg_lambda=1.0,
-        random_state=RANDOM_SEED,
-        n_jobs=-1,
-        verbosity=-1,
-    )
+    params = {
+        "objective": "regression",
+        "n_estimators": 1200,
+        "learning_rate": 0.03,
+        "num_leaves": 64,
+        "max_depth": -1,
+        "min_child_samples": 80,
+        "subsample": 0.85,
+        "subsample_freq": 1,
+        "colsample_bytree": 0.85,
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "random_state": RANDOM_SEED,
+        "n_jobs": -1,
+        "verbosity": -1,
+    }
+
+    if device_type == "gpu":
+        params.update(
+            {
+                "device_type": "gpu",
+                "max_bin": 63,
+                "gpu_use_dp": False,
+            }
+        )
+
+    return LGBMRegressor(**params)
+
+
+def lightgbm_device_candidates() -> list[str]:
+    """Return device candidates based on LGBM_DEVICE."""
+    if DEFAULT_LIGHTGBM_DEVICE in {"cpu", "gpu"}:
+        return [DEFAULT_LIGHTGBM_DEVICE]
+    if DEFAULT_LIGHTGBM_DEVICE != "auto":
+        raise ValueError("LGBM_DEVICE must be one of: auto, cpu, gpu")
+    return ["gpu", "cpu"]
+
+
+def fit_with_device_fallback(fit_fn):
+    """Try requested LightGBM devices and fall back from GPU to CPU in auto mode."""
+    candidates = lightgbm_device_candidates()
+    last_error = None
+
+    for device_type in candidates:
+        try:
+            log_step(f"trying LightGBM device_type={device_type}")
+            model = make_lightgbm_regressor(device_type=device_type)
+            fit_fn(model)
+            log_step(f"LightGBM fitted with device_type={device_type}")
+            return model
+        except Exception as exc:
+            last_error = exc
+            if device_type == "gpu" and candidates[-1] == "cpu":
+                log_step(
+                    "GPU LightGBM failed; falling back to CPU. "
+                    f"Reason: {type(exc).__name__}: {exc}"
+                )
+                continue
+            raise
+
+    raise RuntimeError("Unable to fit LightGBM model") from last_error
 
 
 def train_lightgbm_log_target(
@@ -137,7 +192,6 @@ def train_lightgbm_log_target(
     feature_names: list[str],
 ):
     """Train LightGBM on log1p(sales) and evaluate against validation rows."""
-    model = make_lightgbm_regressor()
     categorical_features = [
         column
         for column in feature_names
@@ -152,15 +206,17 @@ def train_lightgbm_log_target(
             "`pip install -r requirements.txt` from usecase_1_forecasting/."
         ) from exc
 
-    model.fit(
-        train[feature_names],
-        np.log1p(train[TARGET]),
-        eval_set=[(valid[feature_names], np.log1p(valid[TARGET]))],
-        eval_metric="rmse",
-        categorical_feature=categorical_features or "auto",
-        callbacks=[early_stopping(100), log_evaluation(100)],
-    )
-    return model
+    def fit_fn(model) -> None:
+        model.fit(
+            train[feature_names],
+            np.log1p(train[TARGET]),
+            eval_set=[(valid[feature_names], np.log1p(valid[TARGET]))],
+            eval_metric="rmse",
+            categorical_feature=categorical_features or "auto",
+            callbacks=[early_stopping(100), log_evaluation(100)],
+        )
+
+    return fit_with_device_fallback(fit_fn)
 
 
 def train_final_lightgbm_log_target(
@@ -168,19 +224,20 @@ def train_final_lightgbm_log_target(
     feature_names: list[str],
 ):
     """Train the final LightGBM model on all labeled training rows."""
-    model = make_lightgbm_regressor()
     categorical_features = [
         column
         for column in feature_names
         if str(train[column].dtype) == "category"
     ]
 
-    model.fit(
-        train[feature_names],
-        np.log1p(train[TARGET]),
-        categorical_feature=categorical_features or "auto",
-    )
-    return model
+    def fit_fn(model) -> None:
+        model.fit(
+            train[feature_names],
+            np.log1p(train[TARGET]),
+            categorical_feature=categorical_features or "auto",
+        )
+
+    return fit_with_device_fallback(fit_fn)
 
 
 def predict_lightgbm_sales(model, frame: pd.DataFrame, feature_names: list[str]) -> np.ndarray:

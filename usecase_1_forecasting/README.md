@@ -192,6 +192,21 @@ Important leakage rule: transaction values are only available historically. They
 - Main model: LightGBM trained on `log1p(sales)` with categorical features and early stopping
 - Optional: ensemble with baseline corrections
 
+LightGBM device selection:
+
+```bash
+# Default: try GPU first, then fall back to CPU if the installed LightGBM build does not support GPU
+python -m src.train
+
+# Force GPU
+LGBM_DEVICE=gpu python -m src.train
+
+# Force CPU
+LGBM_DEVICE=cpu python -m src.train
+```
+
+Kaggle notebooks must have an accelerator enabled separately from the notebook settings. LightGBM uses GPU through its own GPU/OpenCL support; if the installed package is CPU-only, the default `auto` mode will continue on CPU and print the fallback reason.
+
 Training outputs:
 
 - `reports/baseline_validation_results.csv`

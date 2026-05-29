@@ -137,6 +137,7 @@ python -m ingestion.validate_pdf
 python -m ingestion.parse_pdf
 python -m ingestion.chunking
 python -m ingestion.ingest
+python -m ingestion.build_indexes
 ```
 
 Planned commands that will become active as implementation progresses:

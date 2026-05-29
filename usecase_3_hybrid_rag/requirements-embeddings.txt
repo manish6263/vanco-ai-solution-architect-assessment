@@ -1,0 +1,6 @@
+# Optional transformer embedding stack.
+#
+# Install this only when you want sentence-transformer embeddings locally.
+# On Kaggle/Colab, Torch is often preinstalled, so install this after checking
+# the environment to avoid downloading unnecessary CUDA wheels.
+sentence-transformers>=3.0,<4.0

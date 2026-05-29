@@ -80,6 +80,12 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+Optional transformer embeddings:
+
+```bash
+pip install -r requirements-embeddings.txt
+```
+
 Windows PowerShell:
 
 ```bash
@@ -87,6 +93,12 @@ python -m venv .venv
 .venv\Scripts\activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+Optional transformer embeddings:
+
+```bash
+pip install -r requirements-embeddings.txt
 ```
 
 ## Source PDF

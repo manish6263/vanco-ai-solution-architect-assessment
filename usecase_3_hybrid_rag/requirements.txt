@@ -1,5 +1,4 @@
 pymupdf>=1.24,<1.25
-sentence-transformers>=3.0,<4.0
 faiss-cpu>=1.8,<1.9
 rank-bm25>=0.2,<0.3
 networkx>=3.2,<4.0
@@ -9,4 +8,3 @@ pandas>=2.2,<2.3
 scikit-learn>=1.4,<1.6
 python-dotenv>=1.0,<2.0
 tqdm>=4.66,<5.0
-

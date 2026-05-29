@@ -91,7 +91,14 @@ pip install -r requirements.txt
 
 ## Source PDF
 
-Download the NCERT Class 12 Physics Part 1 PDF from:
+Option A, download directly with the helper:
+
+```bash
+python -m ingestion.download_pdf
+python -m ingestion.validate_pdf
+```
+
+Option B, download manually from:
 
 ```text
 https://www.drishtiias.com/images/pdf/NCERT-Class-12-Physics-Part-1.pdf
@@ -103,11 +110,18 @@ Place it at:
 usecase_3_hybrid_rag/data/raw/ncert_physics_part1.pdf
 ```
 
+Then validate it:
+
+```bash
+python -m ingestion.validate_pdf
+```
+
 ## Planned Commands
 
 These commands will become active as implementation progresses:
 
 ```bash
+python -m ingestion.validate_pdf
 python -m ingestion.parse_pdf
 python -m ingestion.ingest
 python -m evaluation.evaluate_retrieval

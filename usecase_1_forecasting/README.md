@@ -218,11 +218,16 @@ Training outputs:
 Prediction outputs:
 
 - `submissions/submission_lightgbm.csv`
+- `submissions/submission_lightgbm_postprocessed.csv`
 - `submissions/test_predictions_lightgbm_detailed.csv`
+- `submissions/test_predictions_lightgbm_postprocessed_detailed.csv`
+- `submissions/submission_diagnostics.csv`
 - `submissions/final_model_feature_importance.csv`
 - `models/lightgbm_final_model.txt`
 
 The prediction pipeline uses recursive day-by-day forecasting for the Kaggle test period. This is necessary because lag and rolling sales features for later test dates depend on earlier forecasted test dates.
+
+The postprocessed submission applies conservative guardrails for recently inactive store-family series and caps extreme predictions using recent sales history. Keep both raw and postprocessed submissions for comparison on Kaggle.
 
 ## Deliverables
 

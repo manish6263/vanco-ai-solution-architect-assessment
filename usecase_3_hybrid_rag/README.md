@@ -135,12 +135,13 @@ Current ingestion commands:
 ```bash
 python -m ingestion.validate_pdf
 python -m ingestion.parse_pdf
+python -m ingestion.chunking
+python -m ingestion.ingest
 ```
 
 Planned commands that will become active as implementation progresses:
 
 ```bash
-python -m ingestion.ingest
 python -m evaluation.evaluate_retrieval
 streamlit run app/streamlit_app.py
 ```

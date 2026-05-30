@@ -108,6 +108,33 @@ def unique_citations(evidence: list[HybridSearchResult], limit: int = 4) -> list
     return citations
 
 
+def compact_query_phrase(question: str) -> str:
+    terms = query_terms(question)
+    ordered_terms = [term for term in normalize_for_matching(question).split() if term in terms]
+    return " ".join(ordered_terms)
+
+
+def evidence_for_answer(question: str, evidence: list[HybridSearchResult]) -> list[HybridSearchResult]:
+    phrase = compact_query_phrase(question)
+    if not phrase:
+        return evidence
+
+    section_matches = [
+        result
+        for result in evidence
+        if phrase in normalize_for_matching(str(result.chunk.get("section") or ""))
+    ]
+    if section_matches:
+        return section_matches
+
+    body_matches = [
+        result
+        for result in evidence
+        if phrase in normalize_for_matching(str(result.chunk.get("text") or ""))
+    ]
+    return body_matches or evidence
+
+
 def sentence_split(text: str) -> list[str]:
     text = repair_pdf_text(text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -117,11 +144,13 @@ def sentence_split(text: str) -> list[str]:
 
 def select_answer_sentences(question: str, evidence: list[HybridSearchResult], limit: int = 4) -> list[str]:
     terms = query_terms(question)
-    compact_query = " ".join(sorted(terms))
+    compact_query = compact_query_phrase(question)
     candidates: list[tuple[float, int, str, str]] = []
     for result in evidence:
         citation = repair_pdf_text(str(result.chunk.get("citation") or ""))
         for sentence in sentence_split(str(result.chunk.get("text") or "")):
+            if sentence.rstrip().endswith("?"):
+                continue
             normalized = normalize_for_matching(sentence)
             coverage = sum(1 for term in terms if term in normalized)
             if coverage == 0 and terms:
@@ -193,7 +222,8 @@ def generate_answer(question: str, top_k: int = 5, use_llm: bool = True) -> Grou
     retriever = HybridRetriever.load()
     evidence = retriever.search(question, top_k=top_k)
     supported = evidence_supported(question, evidence)
-    citations = unique_citations(evidence)
+    answer_evidence = evidence_for_answer(question, evidence) if supported else []
+    citations = unique_citations(answer_evidence)
 
     if not supported:
         return GroundedAnswer(
@@ -204,9 +234,9 @@ def generate_answer(question: str, top_k: int = 5, use_llm: bool = True) -> Grou
             supported=False,
         )
 
-    answer_text = openai_answer(question, evidence) if use_llm else None
+    answer_text = openai_answer(question, answer_evidence) if use_llm else None
     if not answer_text:
-        selected = select_answer_sentences(question, evidence)
+        selected = select_answer_sentences(question, answer_evidence)
         if selected:
             answer_text = " ".join(selected)
         else:

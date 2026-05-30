@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from config import KEYWORD_INDEX_PATH
+from config import CHUNKS_JSONL_PATH, KEYWORD_INDEX_PATH, VECTOR_METADATA_PATH
 
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?")
@@ -61,8 +61,13 @@ class BM25KeywordStore:
     def load(cls, path: Path = KEYWORD_INDEX_PATH) -> "BM25KeywordStore":
         if not path.exists():
             raise SystemExit(f"Missing BM25 index: {path}. Run `python -m ingestion.build_indexes`.")
-        with path.open("rb") as file:
-            payload = pickle.load(file)
+        try:
+            with path.open("rb") as file:
+                payload = pickle.load(file)
+        except ModuleNotFoundError:
+            print("BM25 pickle uses an unavailable package; rebuilding keyword index from chunks.")
+            chunks = load_chunks_for_rebuild()
+            return cls.build(chunks)
         return cls(
             bm25=payload["bm25"],
             chunks=payload["chunks"],
@@ -128,3 +133,18 @@ class SimpleBM25:
                 score += self.idf.get(term, 0.0) * numerator / denominator
             scores[index] = score
         return scores
+
+
+def load_chunks_for_rebuild() -> list[dict]:
+    source_path = VECTOR_METADATA_PATH if VECTOR_METADATA_PATH.exists() else CHUNKS_JSONL_PATH
+    if not source_path.exists():
+        raise SystemExit("Cannot rebuild BM25 index because chunk metadata is missing.")
+    rows: list[dict] = []
+    with source_path.open("r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
+            if line:
+                import json
+
+                rows.append(json.loads(line))
+    return rows

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import pickle
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,6 +34,30 @@ def import_faiss(required: bool = True):
             ) from exc
         return None
     return faiss
+
+
+def build_sklearn_index(chunks: list[dict], encoder: TfidfVectorizer | None = None) -> "FaissVectorStore":
+    texts = [chunk.get("search_text") or chunk["text"] for chunk in chunks]
+    if encoder is None:
+        encoder = TfidfVectorizer(
+            max_features=4096,
+            ngram_range=(1, 2),
+            min_df=1,
+            stop_words="english",
+        )
+        matrix = encoder.fit_transform(texts)
+    else:
+        matrix = encoder.transform(texts)
+    vectors = normalize(matrix, norm="l2", axis=1).astype(np.float32).toarray()
+    index = NearestNeighbors(metric="cosine", algorithm="brute")
+    index.fit(vectors)
+    return FaissVectorStore(
+        index=index,
+        encoder=encoder,
+        chunks=chunks,
+        backend="sklearn_nearest_neighbors",
+        vectors=vectors,
+    )
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -80,15 +105,7 @@ class FaissVectorStore:
             return cls(index=index, encoder=encoder, chunks=chunks, backend="faiss")
 
         print("faiss-cpu not installed; using sklearn NearestNeighbors fallback.")
-        index = NearestNeighbors(metric="cosine", algorithm="brute")
-        index.fit(vectors)
-        return cls(
-            index=index,
-            encoder=encoder,
-            chunks=chunks,
-            backend="sklearn_nearest_neighbors",
-            vectors=vectors,
-        )
+        return build_sklearn_index(chunks, encoder=encoder)
 
     def save(
         self,
@@ -135,11 +152,21 @@ class FaissVectorStore:
             else:
                 raise ValueError("Not a sklearn vector index payload.")
         except Exception:
-            faiss = import_faiss(required=True)
-            index = faiss.read_index(str(index_path))
-        with encoder_path.open("rb") as file:
-            encoder = pickle.load(file)
+            pass
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with encoder_path.open("rb") as file:
+                encoder = pickle.load(file)
         chunks = read_jsonl(metadata_path)
+        try:
+            index
+        except UnboundLocalError:
+            faiss = import_faiss(required=False)
+            if faiss is not None:
+                index = faiss.read_index(str(index_path))
+            else:
+                print("FAISS index exists but faiss-cpu is unavailable; rebuilding sklearn vector index.")
+                return build_sklearn_index(chunks, encoder=encoder)
         return cls(index=index, encoder=encoder, chunks=chunks, backend=backend, vectors=vectors)
 
     def search(self, query: str, top_k: int = 8) -> list[VectorSearchResult]:

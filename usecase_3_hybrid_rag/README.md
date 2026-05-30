@@ -139,6 +139,7 @@ python -m ingestion.chunking
 python -m ingestion.ingest
 python -m ingestion.build_indexes
 python -m retrieval.hybrid_retriever "What is Coulomb's law?"
+python -m generation.answer "What is Coulomb's law?" --no-llm
 ```
 
 Planned commands that will become active as implementation progresses:

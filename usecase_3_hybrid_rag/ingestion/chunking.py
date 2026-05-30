@@ -14,6 +14,7 @@ from config import CHUNKS_JSONL_PATH, PAGES_JSONL_PATH, ensure_directories
 DEFAULT_MAX_CHARS = 1600
 DEFAULT_OVERLAP_CHARS = 250
 MIN_CHUNK_CHARS = 180
+NUMBERED_HEADING_PATTERN = re.compile(r"^\d+(?:\.\d+)+\s+\S+")
 
 
 @dataclass
@@ -149,15 +150,24 @@ def make_search_text(page: dict, chunk_text: str) -> str:
     if infer_content_type(page, chunk_text) == "front_matter":
         return chunk_text
 
+    section = infer_section(page)
     context_parts = [
         str(page.get("chapter") or ""),
-        str(page.get("section") or ""),
+        section or "",
         " | ".join(page.get("headings") or []),
     ]
     context = " ".join(part for part in context_parts if part).strip()
     if context:
         return f"{context}\n\n{chunk_text}"
     return chunk_text
+
+
+def infer_section(page: dict) -> str | None:
+    headings = [str(heading).strip() for heading in page.get("headings") or []]
+    numbered_headings = [heading for heading in headings if NUMBERED_HEADING_PATTERN.match(heading)]
+    if numbered_headings:
+        return numbered_headings[-1]
+    return page.get("section")
 
 
 def build_chunks(pages: list[dict]) -> list[ChunkRecord]:
@@ -173,9 +183,10 @@ def build_chunks(pages: list[dict]) -> list[ChunkRecord]:
 
         for chunk_index, chunk_text in enumerate(page_chunks, start=1):
             content_type = infer_content_type(page, chunk_text)
+            section = infer_section(page)
             citation = f"p. {page_number}"
-            if page.get("section") and content_type != "front_matter":
-                citation = f"{citation}, {page['section']}"
+            if section and content_type != "front_matter":
+                citation = f"{citation}, {section}"
             chunks.append(
                 ChunkRecord(
                     chunk_id=f"page_{page_number:03d}_chunk_{chunk_index:02d}",
@@ -186,7 +197,7 @@ def build_chunks(pages: list[dict]) -> list[ChunkRecord]:
                     search_text=make_search_text(page, chunk_text),
                     citation=citation,
                     chapter=page.get("chapter"),
-                    section=page.get("section"),
+                    section=section,
                     headings=list(page.get("headings") or []),
                     formula_candidates=list(page.get("formula_candidates") or []),
                     content_type=content_type,

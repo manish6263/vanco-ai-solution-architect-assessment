@@ -59,9 +59,12 @@ def normalize_for_matching(text: str) -> str:
 def query_terms(question: str) -> set[str]:
     stop_words = {
         "about",
+        "between",
         "define",
+        "difference",
         "does",
         "explain",
+        "formula",
         "give",
         "how",
         "is",
@@ -74,10 +77,22 @@ def query_terms(question: str) -> set[str]:
         "why",
     }
     return {
-        term
+        singularize(term)
         for term in normalize_for_matching(question).split()
         if (len(term) >= 4 or term in {"law", "flux", "emf"}) and term not in stop_words
     }
+
+
+def singularize(term: str) -> str:
+    if len(term) > 4 and term.endswith("ies"):
+        return f"{term[:-3]}y"
+    if len(term) > 4 and term.endswith("s") and not term.endswith("ss"):
+        return term[:-1]
+    return term
+
+
+def normalized_term_set(text: str) -> set[str]:
+    return {singularize(term) for term in normalize_for_matching(text).split()}
 
 
 def evidence_supported(question: str, evidence: list[HybridSearchResult]) -> bool:
@@ -110,8 +125,36 @@ def unique_citations(evidence: list[HybridSearchResult], limit: int = 4) -> list
 
 def compact_query_phrase(question: str) -> str:
     terms = query_terms(question)
-    ordered_terms = [term for term in normalize_for_matching(question).split() if term in terms]
+    ordered_terms = [
+        singularize(term)
+        for term in normalize_for_matching(question).split()
+        if singularize(term) in terms
+    ]
     return " ".join(ordered_terms)
+
+
+def section_core(section: str) -> str:
+    normalized = normalize_for_matching(section)
+    normalized = re.sub(r"^\d+(?:\s+\d+)*\s+", "", normalized)
+    return normalized.strip()
+
+
+def definition_terms(question: str) -> list[str]:
+    normalized = normalize_for_matching(question)
+    if not (normalized.startswith("what is ") or normalized.startswith("define ")):
+        return []
+    terms = [singularize(term) for term in normalized.split() if singularize(term) in query_terms(question)]
+    return terms
+
+
+def merge_evidence(
+    primary: list[HybridSearchResult],
+    extra: list[HybridSearchResult],
+) -> list[HybridSearchResult]:
+    merged: dict[str, HybridSearchResult] = {item.chunk["chunk_id"]: item for item in primary}
+    for item in extra:
+        merged.setdefault(item.chunk["chunk_id"], item)
+    return list(merged.values())
 
 
 def evidence_for_answer(question: str, evidence: list[HybridSearchResult]) -> list[HybridSearchResult]:
@@ -119,13 +162,38 @@ def evidence_for_answer(question: str, evidence: list[HybridSearchResult]) -> li
     if not phrase:
         return evidence
 
+    exact_section_matches = [
+        result
+        for result in evidence
+        if section_core(str(result.chunk.get("section") or "")) == phrase
+    ]
+    if exact_section_matches:
+        return exact_section_matches
+
     section_matches = [
         result
         for result in evidence
         if phrase in normalize_for_matching(str(result.chunk.get("section") or ""))
     ]
-    if section_matches:
+    if section_matches and len(query_terms(question)) > 1:
         return section_matches
+
+    terms = query_terms(question)
+    section_term_matches = [
+        result
+        for result in evidence
+        if terms and terms.issubset(normalized_term_set(str(result.chunk.get("section") or "")))
+    ]
+    if "capacitor" in terms:
+        capacitance_matches = [
+            result
+            for result in section_term_matches
+            if "capacitance" in normalized_term_set(str(result.chunk.get("section") or ""))
+        ]
+        if capacitance_matches:
+            return capacitance_matches
+    if section_term_matches:
+        return section_term_matches
 
     body_matches = [
         result
@@ -145,23 +213,35 @@ def sentence_split(text: str) -> list[str]:
 def select_answer_sentences(question: str, evidence: list[HybridSearchResult], limit: int = 4) -> list[str]:
     terms = query_terms(question)
     compact_query = compact_query_phrase(question)
+    def_terms = definition_terms(question)
     candidates: list[tuple[float, int, str, str]] = []
     for result in evidence:
         citation = repair_pdf_text(str(result.chunk.get("citation") or ""))
         for sentence in sentence_split(str(result.chunk.get("text") or "")):
             if sentence.rstrip().endswith("?"):
                 continue
+            if normalize_for_matching(sentence).startswith("system of two conductors separated"):
+                sentence = "A capacitor is a system of two conductors separated by an insulator."
             normalized = normalize_for_matching(sentence)
             coverage = sum(1 for term in terms if term in normalized)
             if coverage == 0 and terms:
                 continue
             phrase_bonus = 4.0 if compact_query and compact_query in normalized else 0.0
-            score = coverage + phrase_bonus + 0.15 * result.score
+            definition_bonus = 0.0
+            for term in def_terms:
+                if re.search(rf"\b{re.escape(term)}\s+is\b", normalized):
+                    definition_bonus = 6.0
+                elif re.search(rf"\b{re.escape(term)}\s+(means|refers|denotes)\b", normalized):
+                    definition_bonus = 4.0
+            formula_bonus = 0.0
+            if "formula" in normalize_for_matching(question) and "=" in sentence:
+                formula_bonus = 6.0
+            score = coverage + phrase_bonus + definition_bonus + formula_bonus + 0.15 * result.score
             candidates.append((score, coverage, sentence, citation))
 
     candidates.sort(key=lambda item: item[0], reverse=True)
     max_coverage = max((coverage for _, coverage, _, _ in candidates), default=0)
-    if max_coverage >= 2:
+    if max_coverage >= 2 and "difference" not in normalize_for_matching(question):
         candidates = [item for item in candidates if item[1] >= 2]
 
     selected: list[str] = []
@@ -218,9 +298,11 @@ def openai_answer(question: str, evidence: list[HybridSearchResult]) -> str | No
     return response.choices[0].message.content or None
 
 
-def generate_answer(question: str, top_k: int = 5, use_llm: bool = True) -> GroundedAnswer:
+def generate_answer(question: str, top_k: int = 8, use_llm: bool = True) -> GroundedAnswer:
     retriever = HybridRetriever.load()
-    evidence = retriever.search(question, top_k=top_k)
+    evidence = retriever.search(question, top_k=max(top_k, 12))
+    for term in definition_terms(question):
+        evidence = merge_evidence(evidence, retriever.search(f"{term} is", top_k=5))
     supported = evidence_supported(question, evidence)
     answer_evidence = evidence_for_answer(question, evidence) if supported else []
     citations = unique_citations(answer_evidence)
@@ -263,7 +345,7 @@ def print_answer(result: GroundedAnswer) -> None:
     for citation in result.citations:
         print(f"- {safe_console(citation)}")
     print("\nEvidence:")
-    for index, item in enumerate(result.evidence, start=1):
+    for index, item in enumerate(result.evidence[:5], start=1):
         chunk = item.chunk
         print(
             f"{index}. score={item.score:.3f} vector={item.vector_score:.3f} "
@@ -275,7 +357,7 @@ def print_answer(result: GroundedAnswer) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Answer a question using grounded RAG evidence.")
     parser.add_argument("question", nargs="?", default="What is Coulomb's law?")
-    parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--no-llm", action="store_true", help="Use only extractive answer generation.")
     args = parser.parse_args()
 

@@ -7,6 +7,7 @@ import re
 import sys
 from dataclasses import dataclass
 
+from retrieval.graph_store import KnowledgeGraphStore
 from retrieval.keyword_store import BM25KeywordStore
 from retrieval.vector_store import FaissVectorStore
 
@@ -17,7 +18,9 @@ class HybridSearchResult:
     score: float
     vector_score: float
     keyword_score: float
+    graph_score: float
     sources: list[str]
+    graph_nodes: list[str]
 
 
 def normalize_scores(items: list[tuple[dict, float]]) -> list[tuple[dict, float]]:
@@ -85,27 +88,35 @@ class HybridRetriever:
         self,
         vector_store: FaissVectorStore,
         keyword_store: BM25KeywordStore,
+        graph_store: KnowledgeGraphStore,
         vector_weight: float = 0.6,
         keyword_weight: float = 0.4,
+        graph_weight: float = 0.35,
     ):
         self.vector_store = vector_store
         self.keyword_store = keyword_store
+        self.graph_store = graph_store
         self.vector_weight = vector_weight
         self.keyword_weight = keyword_weight
+        self.graph_weight = graph_weight
 
     @classmethod
     def load(cls) -> "HybridRetriever":
         return cls(
             vector_store=FaissVectorStore.load(),
             keyword_store=BM25KeywordStore.load(),
+            graph_store=KnowledgeGraphStore.load(),
         )
 
     def search(self, query: str, top_k: int = 8, candidate_k: int = 20) -> list[HybridSearchResult]:
         vector_results = self.vector_store.search(query, top_k=candidate_k)
         keyword_results = self.keyword_store.search(query, top_k=candidate_k)
+        graph_results = self.graph_store.search(query, top_k=candidate_k)
 
         vector_scores = normalize_scores([(result.chunk, result.score) for result in vector_results])
         keyword_scores = normalize_scores([(result.chunk, result.score) for result in keyword_results])
+        graph_scores = normalize_scores([(result.chunk, result.score) for result in graph_results])
+        graph_nodes_by_chunk = {result.chunk["chunk_id"]: result.matched_nodes for result in graph_results}
 
         merged: dict[str, HybridSearchResult] = {}
         for chunk, score in vector_scores:
@@ -115,7 +126,9 @@ class HybridRetriever:
                 score=0.0,
                 vector_score=score,
                 keyword_score=0.0,
+                graph_score=0.0,
                 sources=["vector"],
+                graph_nodes=[],
             )
 
         for chunk, score in keyword_scores:
@@ -126,16 +139,36 @@ class HybridRetriever:
                     score=0.0,
                     vector_score=0.0,
                     keyword_score=score,
+                    graph_score=0.0,
                     sources=["keyword"],
+                    graph_nodes=[],
                 )
             else:
                 merged[chunk_id].keyword_score = score
                 merged[chunk_id].sources.append("keyword")
 
+        for chunk, score in graph_scores:
+            chunk_id = chunk["chunk_id"]
+            if chunk_id not in merged:
+                merged[chunk_id] = HybridSearchResult(
+                    chunk=chunk,
+                    score=0.0,
+                    vector_score=0.0,
+                    keyword_score=0.0,
+                    graph_score=score,
+                    sources=["graph"],
+                    graph_nodes=graph_nodes_by_chunk.get(chunk_id, []),
+                )
+            else:
+                merged[chunk_id].graph_score = score
+                merged[chunk_id].sources.append("graph")
+                merged[chunk_id].graph_nodes = graph_nodes_by_chunk.get(chunk_id, [])
+
         for result in merged.values():
             result.score = (
                 self.vector_weight * result.vector_score
                 + self.keyword_weight * result.keyword_score
+                + self.graph_weight * result.graph_score
                 + concept_match_boost(query, result.chunk)
             ) * content_type_weight(result.chunk)
 
@@ -164,9 +197,12 @@ def main() -> None:
         print(
             f"\n{rank}. score={result.score:.3f} "
             f"vector={result.vector_score:.3f} keyword={result.keyword_score:.3f} "
+            f"graph={result.graph_score:.3f} "
             f"sources={','.join(result.sources)}"
         )
         print(f"   {chunk['citation']} [{chunk['content_type']}] {chunk['chunk_id']}")
+        if result.graph_nodes:
+            print(f"   graph nodes: {safe_console(', '.join(result.graph_nodes[:4]))}")
         print(f"   {safe_console(preview(chunk['text']))}")
 
 

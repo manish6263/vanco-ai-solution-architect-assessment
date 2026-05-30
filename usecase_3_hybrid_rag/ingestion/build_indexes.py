@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections import Counter
 
-from config import CHUNKS_JSONL_PATH, KEYWORD_INDEX_PATH, VECTOR_INDEX_PATH, ensure_directories
+from config import CHUNKS_JSONL_PATH, GRAPH_JSON_PATH, KEYWORD_INDEX_PATH, VECTOR_INDEX_PATH, ensure_directories
 from ingestion.chunking import load_jsonl
+from retrieval.graph_store import KnowledgeGraphStore
 from retrieval.keyword_store import BM25KeywordStore
 from retrieval.vector_store import FaissVectorStore
 
@@ -30,6 +31,16 @@ def main() -> None:
     vector_store = FaissVectorStore.build(chunks)
     vector_store.save()
     print(f"Wrote FAISS index: {VECTOR_INDEX_PATH}")
+
+    print("Building local knowledge graph")
+    graph_store = KnowledgeGraphStore.build(chunks)
+    graph_store.save()
+    print(f"Wrote graph index: {GRAPH_JSON_PATH}")
+    print(
+        "Graph summary: "
+        f"{graph_store.graph.number_of_nodes()} nodes, "
+        f"{graph_store.graph.number_of_edges()} edges"
+    )
     print("Index build complete.")
 
 

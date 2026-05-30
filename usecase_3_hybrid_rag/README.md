@@ -30,7 +30,7 @@ Planned components:
 - Chunking: page-aware and heading-aware chunks
 - Vector DB/index: FAISS or Chroma
 - Keyword search: BM25
-- Graph DB/representation: NetworkX persisted graph, with Neo4j export path documented as the production replacement
+- Graph DB/representation: NetworkX persisted JSON/GraphML graph, with Neo4j export path documented as the production replacement
 - Backend/API: Streamlit-native backend for live demo
 - UI: Streamlit
 - LLM: configurable provider through environment variables
@@ -159,6 +159,7 @@ Planned node types:
 - Formula
 - Definition
 - Page
+- Chunk
 
 Planned edge types:
 

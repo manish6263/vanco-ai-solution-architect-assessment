@@ -38,6 +38,8 @@ usecase_3_hybrid_rag/data/processed/*
 !usecase_3_hybrid_rag/data/processed/.gitkeep
 usecase_3_hybrid_rag/indexes/*
 !usecase_3_hybrid_rag/indexes/.gitkeep
+usecase_3_hybrid_rag/graph/*.json
+usecase_3_hybrid_rag/graph/*.graphml
 usecase_3_hybrid_rag/graph/data/
 
 # Model artifacts
